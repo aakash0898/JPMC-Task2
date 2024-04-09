@@ -1,0 +1,125 @@
+From 2035e1dc5cbf370c6918cb29343d1bee6b5f32cb Mon Sep 17 00:00:00 2001
+From: Aakash Singh <aakashsingh080598@gmail.com>
+Date: Tue, 9 Apr 2024 13:05:55 +0530
+Subject: [PATCH] Task
+
+git commit -mTask
+---
+ src/App.tsx   | 24 +++++++++++++++++++++---
+ src/Graph.tsx | 16 +++++++++++-----
+ 2 files changed, 32 insertions(+), 8 deletions(-)
+
+diff --git a/src/App.tsx b/src/App.tsx
+index 0728518..90c83f3 100644
+--- a/src/App.tsx
++++ b/src/App.tsx
+@@ -8,6 +8,7 @@ import './App.css';
+  */
+ interface IState {
+   data: ServerRespond[],
++  showGraph: boolean; // Step 1: Add showGraph property
+ }
+ 
+ /**
+@@ -22,6 +23,7 @@ class App extends Component<{}, IState> {
+       // data saves the server responds.
+       // We use this state to parse data down to the child element (Graph) as element property
+       data: [],
++      showGraph: false, // Step 2: Initialize showGraph to false
+     };
+   }
+ 
+@@ -29,18 +31,34 @@ class App extends Component<{}, IState> {
+    * Render Graph react component with state.data parse as property data
+    */
+   renderGraph() {
+-    return (<Graph data={this.state.data}/>)
++    // Step 3: Render the graph conditionally based on showGraph
++    return this.state.showGraph ? <Graph data={this.state.data} /> : null;
++    //return (<Graph data={this.state.data}/>)
+   }
+ 
+   /**
+    * Get new data from server and update the state with the new data
+    */
+-  getDataFromServer() {
++  /*getDataFromServer() {
+     DataStreamer.getData((serverResponds: ServerRespond[]) => {
+       // Update the state by creating a new array of data that consists of
+       // Previous data in the state and the new data from server
+       this.setState({ data: [...this.state.data, ...serverResponds] });
+     });
++  }*/
++  getDataFromServer() {
++    // Step 4: Update getDataFromServer to continuously fetch data
++    const interval = setInterval(() => {
++      DataStreamer.getData((serverResponds: ServerRespond[]) => {
++        this.setState({
++          data: serverResponds,
++          showGraph: true, // Once data is received, show the graph
++        });
++      });
++    }, 100); // Fetch data every 100ms
++
++    // Stop fetching data if unmounted
++    return () => clearInterval(interval);
+   }
+ 
+   /**
+@@ -59,7 +77,7 @@ class App extends Component<{}, IState> {
+             // As part of your task, update the getDataFromServer() function
+             // to keep requesting the data every 100ms until the app is closed
+             // or the server does not return anymore data.
+-            onClick={() => {this.getDataFromServer()}}>
++            onClick={() => {this.getDataFromServer();}}>
+             Start Streaming Data
+           </button>
+           <div className="Graph">
+diff --git a/src/Graph.tsx b/src/Graph.tsx
+index 3b2a7da..cccb7a9 100644
+--- a/src/Graph.tsx
++++ b/src/Graph.tsx
+@@ -14,8 +14,8 @@ interface IProps {
+  * Perspective library adds load to HTMLElement prototype.
+  * This interface acts as a wrapper for Typescript compiler.
+  */
+-interface PerspectiveViewerElement {
+-  load: (table: Table) => void,
++interface PerspectiveViewerElement extends HTMLElement {
++  load: (table: Table) => void;
+ }
+ 
+ /**
+@@ -32,7 +32,8 @@ class Graph extends Component<IProps, {}> {
+ 
+   componentDidMount() {
+     // Get element to attach the table from the DOM.
+-    const elem: PerspectiveViewerElement = document.getElementsByTagName('perspective-viewer')[0] as unknown as PerspectiveViewerElement;
++    //const elem: PerspectiveViewerElement = document.getElementsByTagName('perspective-viewer')[0] as unknown as PerspectiveViewerElement;
++    const elem = document.getElementsByTagName('perspective-viewer')[0] as PerspectiveViewerElement;
+ 
+     const schema = {
+       stock: 'string',
+@@ -49,12 +50,17 @@ class Graph extends Component<IProps, {}> {
+ 
+       // Add more Perspective configurations here.
+       elem.load(this.table);
++      elem.setAttribute('view', 'y_line');
++      elem.setAttribute('column-pivots', '["stock"]');
++      elem.setAttribute('row-pivots', '["timestamp"]');
++      elem.setAttribute('columns', '["top_ask_price"]');
++      elem.setAttribute('aggregates', '{"stock":"distinct count", "timestamp":"distinct count", "top_ask_price":"avg", "top_bid_price":"avg"}');
+     }
+   }
+ 
+-  componentDidUpdate() {
++  componentDidUpdate(prevProps: IProps) {
+     // Everytime the data props is updated, insert the data into Perspective table
+-    if (this.table) {
++    if (this.table && prevProps.data !== this.props.data) {
+       // As part of the task, you need to fix the way we update the data props to
+       // avoid inserting duplicated entries into Perspective table again.
+       this.table.update(this.props.data.map((el: any) => {
+-- 
+2.43.0.windows.1
+
